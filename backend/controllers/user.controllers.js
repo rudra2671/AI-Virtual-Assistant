@@ -43,18 +43,29 @@ export const askToAssistant=async (req,res)=>{
       const {command}=req.body
       const user=await User.findById(req.userId);
       user.history.push(command)
-      user.save()
+      await user.save()
       const userName=user.name
       const assistantName=user.assistantName
       const result=await geminiResponse(command,assistantName,userName)
 
-      const jsonMatch=result.match(/{[\s\S]*}/)
+      let gemResult;
+try {
+   gemResult = JSON.parse(jsonMatch[0]);
+} catch (e) {
+   return res.status(400).json({
+      response: "AI returned invalid JSON"
+   });
+}
       if(!jsonMatch){
-         return res.ststus(400).json({response:"sorry, i can't understand"})
+         return res.status(400).json({response:"sorry, i can't understand"})
       }
       const gemResult=JSON.parse(jsonMatch[0])
       console.log(gemResult)
-      const type=gemResult.type
+      if (!gemResult.type) {
+   return res.status(400).json({
+      response: "Missing command type from AI"
+   });
+}
 
       switch(type){
          case 'get-date' :
